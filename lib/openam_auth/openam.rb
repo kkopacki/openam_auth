@@ -6,9 +6,13 @@ module OpenamAuth
 
     COOKIE_NAME_FOR_TOKEN = "/identity/getCookieNameForToken"
     IS_TOKEN_VALID = "/identity/isTokenValid"
+    USER_ATTRIBUTES = "/identity/attributes"
+    LOGIN_URL = "/UI/Login?goto="
+    LOGOUT_URL = "/identity/logout?subjectid="
 
-    def initialize(base_url)
-      @base_url = base_url
+
+    def initialize
+      @base_url = OpenamConfig.openam_url
     end
 
     def cookie_name
@@ -27,7 +31,30 @@ module OpenamAuth
     end
 
     def openam_user(token_cookie_name, token)
+      self.class.cookies({ token_cookie_name => token })
+      self.class.post("#{@base_url}#{USER_ATTRIBUTES}", {:subjectid => token})
+    end
 
+    def login_url
+      "#{@base_url}#{LOGIN_URL}"
+    end
+
+    def logout_url
+      "#{@base_url}#{LOGOUT_URL}"
+    end
+    def user_hash(response)
+      opensso_user = Hash.new{ |h,k| h[k] = Array.new }
+      attribute_name = ''
+      lines = response.split(/\n/)
+      lines.each do |line|
+        line = line.strip
+        if line.match(/^userdetails.attribute.name=/)
+          attribute_name = line.gsub(/^userdetails.attribute.name=/, '').strip
+        elsif line.match(/^userdetails.attribute.value=/)
+          opensso_user[attribute_name] << line.gsub(/^userdetails.attribute.value=/, '').strip
+        end
+      end
+      opensso_user
     end
 
 

@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'openam_auth'
 
 describe OpenamAuth do
+
   let(:token) { '121212121' }
   let!(:openam_url) { OpenamConfig.config do
                         openam_url 'http://server.openam.com'
@@ -14,7 +15,7 @@ describe OpenamAuth do
     end
 
     it "should return the correct cookie name" do
-      OpenamAuth::Openam.new(openam_url).cookie_name.should eq("iPlanetDirectoryPro")
+      OpenamAuth::Openam.new.cookie_name.should eq("iPlanetDirectoryPro")
     end
   end
 
@@ -26,20 +27,33 @@ describe OpenamAuth do
     end
 
     it "should be a valid token" do
-      OpenamAuth::Openam.new(openam_url).valid_token?(token).should be_true
+      OpenamAuth::Openam.new.valid_token?(token).should be_true
     end
   end
 
   describe OpenamAuth, "#openam user" do
     let(:response) {  <<EOF
-    userdetails.token.id=#{token}\nuserdetails.attribute.name=mail\nuserdetails.attribute.name=sunidentitymsisdnnumber\nuserdetails.attribute.name=sn\nuserdetails.attribute.value=amAdmin\nuserdetails.attribute.name=employeenumber\nuserdetails.attribute.name=postaladdress\nuserdetails.attribute.name=cn\nuserdetails.attribute.value=amAdmin\nuserdetails.attribute.name=iplanet-am-user-success-url\nuserdetails.attribute.name=roles\nuserdetails.attribute.name=iplanet-am-user-failure-url\nuserdetails.attribute.name=givenname\nuserdetails.attribute.value=amAdmin\nuserdetails.attribute.name=inetuserstatus\nuserdetails.attribute.value=Active\nuserdetails.attribute.name=dn\nuserdetails.attribute.value=uid=amAdmin,ou=people,dc=openam,dc=forgerock,dc=org\nuserdetails.attribute.name=telephonenumber\nuserdetails.attribute.name=iplanet-am-user-alias-list\n
+    userdetails.token.id=#{token}
+    userdetails.attribute.name=mail
+    userdetails.attribute.name=sunidentitymsisdnnumber
+    userdetails.attribute.name=sn
+    userdetails.attribute.value=amAdmin
 EOF
     }
 
-    it "should return the openam user string" do
-
+    before do
+      stub_request(:post, "#{openam_url}/identity/attributes").
+        with(:headers => {"Cookie"=>"iPlanetDirectoryPro=#{token}"}).
+        to_return(:status => 200, :body => response, :headers => {})
     end
 
+    it "should return openam user string" do
+      OpenamAuth::Openam.new.openam_user('iPlanetDirectoryPro',token).to_s.should eq(response)
+    end
+
+    it "should parse response" do
+      OpenamAuth::Openam.new.user_hash(response).should eq({"sn" => ["amAdmin"] })
+    end
 
   end
 
