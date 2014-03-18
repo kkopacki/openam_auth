@@ -20,6 +20,10 @@ And then execute:
 Or install it yourself as:
 
     $ gem install openam_auth
+    
+## Running tests
+  
+    rspec
 
 ## Usage
 
