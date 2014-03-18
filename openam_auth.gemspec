@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = OpenamAuth::VERSION
   spec.authors       = ["sameera207"]
   spec.email         = ["sameera207@gmail.com"]
-  spec.description   = %q{TODO: Write a gem description}
-  spec.summary       = %q{TODO: Write a gem summary}
+  spec.description   = %q{ruby authentication client for OpenAm}
+  spec.summary       = %q{ruby authentication client for forgerock OpenAM}
   spec.homepage      = ""
   spec.license       = "MIT"
 

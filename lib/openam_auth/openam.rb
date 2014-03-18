@@ -8,7 +8,7 @@ module OpenamAuth
     IS_TOKEN_VALID = "/identity/isTokenValid"
     USER_ATTRIBUTES = "/identity/attributes"
     LOGIN_URL = "/UI/Login?goto="
-    LOGOUT_URL = "/identity/logout?subjectid="
+    LOGOUT_URL = "/identity/logout"
 
 
     def initialize
@@ -21,7 +21,7 @@ module OpenamAuth
     end
 
     def token_cookie(request, cookie_name)
-      token_cookie = CGI.unescape(request.cookies.fetch(token_cookie_name, nil).to_s.gsub('+', '%2B'))
+      token_cookie = CGI.unescape(request.cookies.fetch(cookie_name, nil).to_s.gsub('+', '%2B'))
       token_cookie != '' ? token_cookie : nil
     end
 
@@ -39,9 +39,10 @@ module OpenamAuth
       "#{@base_url}#{LOGIN_URL}"
     end
 
-    def logout_url
-      "#{@base_url}#{LOGOUT_URL}"
+    def logout(token)
+      self.class.get("#{@base_url}#{LOGOUT_URL}?subjectid=#{token}", {})
     end
+
     def user_hash(response)
       opensso_user = Hash.new{ |h,k| h[k] = Array.new }
       attribute_name = ''

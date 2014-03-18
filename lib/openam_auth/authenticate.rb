@@ -29,6 +29,10 @@ module OpenamAuth
       end
     end
 
+    def openam_logout(token)
+      OpenamAuth::Openam.new.logout(token)
+    end
+
     def current_user
       User.where(id: session[:user_id]).first
     end
