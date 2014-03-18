@@ -88,7 +88,7 @@ Or install it yourself as:
   openam_logout(<current user token>)
 ```
 
-## Speacial thanks :)   
+### Special thanks :)   
 
 https://github.com/tychobrailleur/openam-sample
 
