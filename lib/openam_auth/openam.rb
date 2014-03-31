@@ -40,7 +40,7 @@ module OpenamAuth
     end
 
     def logout(token)
-      self.class.get("#{@base_url}#{LOGOUT_URL}?subjectid=#{token}", {})
+      self.class.post("#{@base_url}#{LOGOUT_URL}", {:subjectid => "#{token}" })
     end
 
     def user_hash(response)
