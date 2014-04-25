@@ -57,8 +57,6 @@ module OpenamAuth
       end
       opensso_user
     end
-
-
   end
 end
 
