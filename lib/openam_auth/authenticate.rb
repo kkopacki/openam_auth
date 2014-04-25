@@ -1,5 +1,6 @@
 module OpenamAuth
   module Authenticate
+    attr_accessor :openam_instance
     extend ActiveSupport::Concern
 
     def authenticate_user!
@@ -12,7 +13,8 @@ module OpenamAuth
 
     private
     def openam
-      OpenamAuth::Openam.new
+      @openam_instance ||= OpenamAuth::Openam.new
+      @openam_instance
     end
 
     def cookie_name
