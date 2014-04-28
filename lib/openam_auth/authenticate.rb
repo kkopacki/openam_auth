@@ -1,45 +1,48 @@
 module OpenamAuth
   module Authenticate
-    module ClassMethods ; end
+    attr_accessor :openam_instance
+    extend ActiveSupport::Concern
 
-    module InstanceMethods
+    def authenticate_user!
+      user ||= User.update_openam_user(token, user_hash) if openam.valid_token?(token)
 
-      def authenticate_user!
-        status = false
-        openam = OpenamAuth::Openam.new
-        cookie_name = openam.cookie_name
-        token = openam.token_cookie(request, cookie_name)
+      session[:user_id] = user.id if user
 
-        #The following class  method shold be implemented by the parent application
-        user = User.existing_user_by_token(token)
-
-        unless user
-          if openam.valid_token?(token)
-            response = openam.openam_user(cookie_name, token)
-            user_hash = openam.user_hash(response.body)
-            #following class method should be implemented by the parent application
-            user = User.update_openam_user(token, user_hash)
-          end
-        end
-        if user
-          session[:user_id] = user.id
-          status = true
-        end
-        status ? true : (redirect_to openam.login_url)
-      end
+      !!session[:user_id] || redirect_to(openam.login_url)
     end
 
-    def openam_logout(token)
-      OpenamAuth::Openam.new.logout(token)
+    private
+    def openam
+      @openam_instance ||= OpenamAuth::Openam.new
+      @openam_instance
+    end
+
+    def cookie_name
+      openam.cookie_name
+    end
+
+    def token
+      openam.token_cookie(request, cookie_name)
+    end
+
+    def user
+      User.existing_user_by_token(token)
     end
 
     def current_user
       User.where(id: session[:user_id]).first
     end
 
-    def self.included(receiver)
-      receiver.extend         ClassMethods
-      receiver.send :include, InstanceMethods
+    def user_hash
+      openam.user_hash(openam_response.body)
+    end
+
+    def openam_response
+      openam.openam_user(cookie_name, token)
+    end
+
+    def openam_logout(token)
+      openam.new.logout(token)
     end
   end
 end
