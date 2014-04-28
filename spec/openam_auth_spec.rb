@@ -47,7 +47,7 @@ EOF
         to_return(:status => 200, :body => response, :headers => {})
     end
 
-    it "should return openam user string" do
+    fit "should return openam user string" do
       OpenamAuth::Openam.new.openam_user('iPlanetDirectoryPro',token).to_s.should eq(response)
     end
 
