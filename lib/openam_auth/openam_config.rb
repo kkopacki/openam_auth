@@ -20,4 +20,5 @@ end
 
 OpenamConfig.config do
   parameter :openam_url
+	parameter :self_url
 end
