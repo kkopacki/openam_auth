@@ -13,6 +13,7 @@ module OpenamAuth
 
     def initialize
       @base_url = OpenamConfig.openam_url
+      @self_url = OpenamConfig.self_url
     end
 
     def cookie_name
@@ -36,7 +37,7 @@ module OpenamAuth
     end
 
     def login_url
-      "#{@base_url}#{LOGIN_URL}"
+      "#{@base_url}#{LOGIN_URL}#{@self_url}"
     end
 
     def logout(token)
