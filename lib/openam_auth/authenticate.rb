@@ -18,7 +18,7 @@ module OpenamAuth
     end
 
     def cookie_name
-      openam.cookie_name
+      @cookie_name ||= openam.cookie_name
     end
 
     def token
@@ -46,4 +46,3 @@ module OpenamAuth
     end
   end
 end
-
