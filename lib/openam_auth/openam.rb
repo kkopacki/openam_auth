@@ -2,61 +2,86 @@ require 'httparty'
 
 module OpenamAuth
   class Openam
+
     include HTTParty
 
-    COOKIE_NAME_FOR_TOKEN = "/identity/getCookieNameForToken"
-    IS_TOKEN_VALID = "/identity/isTokenValid"
-    USER_ATTRIBUTES = "/identity/attributes"
-    LOGIN_URL = "/UI/Login?goto="
-    LOGOUT_URL = "/identity/logout"
+    format :json
 
+    URIS = {
+      'login' => '/UI/Login?goto=',
+      'server_info' => '/json/serverinfo/*',
+      'sessions' => '/json/sessions/',
+      'users' => '/json/users/'
+    }.freeze
 
     def initialize
-      @base_url = OpenamConfig.openam_url
-      @self_url = OpenamConfig.self_url
+      @return_url = OpenamAuth::Config.return_url
+      @openam_url = OpenamAuth::Config.openam_url
+    end
+
+    def uid(request)
+      return nil unless token(request)
+      response = self.class.post(
+        "#{url('sessions')}#{token(request)}",
+        {
+          query: { '_action' => 'validate' },
+          headers: {'Content-Type' => 'application/json'}
+        }
+      )
+      response&.fetch('valid', nil) && response&.fetch('uid', nil)
+    end
+
+    def login_url(request)
+      [url('login'), return_url(request)].compact.join
+    end
+
+    def find_or_update_user(request)
+      return nil unless token(request)
+      User.existing_user_by_token(token(request)) || User.update_openam_user(token(request), user_hash(request))
+    end
+
+    def logout(request)
+      return true unless token(request)
+      response = self.class.post(
+        url('sessions'),
+        {
+          headers: { cookie_name => token(request), 'Content-Type' => 'application/json' },
+          query: { '_action' => 'logout' }
+        }
+      )
+      !!response&.fetch('result', nil)
+    end
+
+    private
+
+    def token(request)
+      session_token = request.cookies.fetch(cookie_name, nil)
+      @token ||= session_token ? CGI.unescape(session_token.to_s) : nil
+    end
+
+    def server_info
+      @server_info ||= self.class.get(url('server_info'), { headers: { 'Content-Type' => 'application/json' } })
     end
 
     def cookie_name
-      response = self.class.post("#{@base_url}#{COOKIE_NAME_FOR_TOKEN}", {})
-      response.body.split('=').last.strip
+      @cookie_name ||= server_info['cookieName']
     end
 
-    def token_cookie(request, cookie_name)
-      token_cookie = CGI.unescape(request.cookies.fetch(cookie_name, nil).to_s.gsub('+', '%2B'))
-      token_cookie != '' ? token_cookie : nil
+    def url(t)
+      [@openam_url, URIS[t]].join
     end
 
-    def valid_token?(token)
-      response = self.class.get("#{@base_url}#{IS_TOKEN_VALID}?tokenid=#{token}", {})
-      response.body.split('=').last.strip == 'true'
-    end
-
-    def openam_user(token_cookie_name, token)
-      self.class.cookies({ token_cookie_name => token })
-      self.class.post("#{@base_url}#{USER_ATTRIBUTES}", {:subjectid => token})
-    end
-
-    def login_url
-      "#{@base_url}#{LOGIN_URL}#{@self_url}"
-    end
-
-    def logout(token)
-      self.class.post("#{@base_url}#{LOGOUT_URL}", {:subjectid => "#{token}" })
-    end
-
-    def user_hash(response)
-      opensso_user = Hash.new{ |h,k| h[k] = Array.new }
-      attribute_name = ''
-      lines = response.split(/\n/)
-      lines.each do |line|
-        line = line.strip
-        if line.match(/^userdetails.attribute.name=/)
-          attribute_name = line.gsub(/^userdetails.attribute.name=/, '').strip
-        elsif line.match(/^userdetails.attribute.value=/)
-          opensso_user[attribute_name] << line.gsub(/^userdetails.attribute.value=/, '').strip
-        end
+    def return_url(request)
+      return request.host_with_port unless @return_url
+      if @return_url.respond_to?(:call)
+        @return_url.call(request)
+      else
+        @return_url
       end
-      opensso_user
+    end
+
+    def user_hash(request)
+      self.class.get("#{url('users')}#{uid(request)}", { headers: { cookie_name => token(request) }, query: {} })
     end
   end
 end

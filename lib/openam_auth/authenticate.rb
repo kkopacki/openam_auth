@@ -4,45 +4,32 @@ module OpenamAuth
     extend ActiveSupport::Concern
 
     def authenticate_user!
-      user ||= User.update_openam_user(token, user_hash) if openam.valid_token?(token)
+      clear_sesion_and_redirect and return unless openam.uid(request)
+      set_session_user_id if openam_user
+    end
 
-      session[:user_id] = user.id if user
-
-      !!session[:user_id] || redirect_to(openam.login_url)
+    def openam_logout!
+      openam.logout(request)
     end
 
     private
+
     def openam
       @openam_instance ||= OpenamAuth::Openam.new
-      @openam_instance
     end
 
-    def cookie_name
-      @cookie_name ||= openam.cookie_name
+    def set_session_user_id
+      session[:user_id] = openam_user.id
+      self.current_user ||= openam_user
     end
 
-    def token
-      openam.token_cookie(request, cookie_name)
+    def openam_user
+      @openam_user ||= openam.find_or_update_user(request)
     end
 
-    def user
-      User.existing_user_by_token(token)
-    end
-
-    def current_user
-      User.where(id: session[:user_id]).first
-    end
-
-    def user_hash
-      openam.user_hash(openam_response.body)
-    end
-
-    def openam_response
-      openam.openam_user(cookie_name, token)
-    end
-
-    def openam_logout(token)
-      openam.new.logout(token)
+    def clear_sesion_and_redirect
+      session[:user_id] = nil
+      redirect_to openam.login_url(request)
     end
   end
 end
